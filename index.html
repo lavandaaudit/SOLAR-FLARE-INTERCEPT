@@ -859,173 +859,202 @@
         }
 
         // ------------------------------------
-        // VISUALIZATION - NEW STYLE
+        // VISUALIZATION - 7-DAY HELIX INTERCEPTOR
         // ------------------------------------
         function drawRadar() {
             if (!STATE.history.length) return;
 
-            // Clear
             const W = rdC.width / (window.devicePixelRatio || 1);
             const H = rdC.height / (window.devicePixelRatio || 1);
             rdCtx.clearRect(0, 0, W, H);
 
-            const cx = W / 2, cy = H / 2;
-            const radius = Math.min(W, H) * 0.42;
+            // 3D Setup
+            const cx = W / 2, cy = H / 2 - 40; // Shift up to fit stack
+            const rx = Math.min(W, H) * 0.4;
+            const ry = rx * 0.35;
+            const layerH = 35; // Vertical spacing between days
+
             const now = new Date();
             const t = performance.now() * 0.001;
 
-            // -- 1. Dynamic Background Grid --
-            // Dashed Circles
-            rdCtx.lineWidth = 1;
-            const rings = [0.25, 0.5, 0.75, 1.0]; // Log Steps kinda
-            const levels = ['A', 'B', 'C', 'M', 'X']; // We need specific r for these
-            // Classes: A=1e-8, B=1e-7...
-            // Log min is -9 (A1.0 is -8, so circle might be further out)
-            // Let's draw Reference Rings for B, C, M, X
-            const refVals = [1e-7, 1e-6, 1e-5, 1e-4];
+            // Rotation based on time
+            const currHrs = now.getUTCHours() + now.getUTCMinutes() / 60;
+            const rotOffset = Math.PI / 2 - (currHrs / 24) * Math.PI * 2;
 
-            rdCtx.setLineDash([2, 4]);
-            refVals.forEach((val, i) => {
-                const r = getLogPos(val) * radius;
-                rdCtx.beginPath(); rdCtx.arc(cx, cy, r, 0, Math.PI * 2);
-                rdCtx.strokeStyle = 'rgba(255, 100, 0, 0.15)';
+            // -- 1. Draw 7 Days History (Helix Stack) --
+            // We draw from bottom (oldest) to top (newest) so they overlap correctly-ish.
+
+            const daysToShow = 7;
+            const oneDay = 24 * 60 * 60 * 1000;
+
+            // Iterate days: 6 days ago -> 0 days ago (Today)
+            for (let d = daysToShow - 1; d >= 0; d--) {
+                const dayStart = new Date(now.getTime() - (d + 1) * oneDay);
+                const dayEnd = new Date(now.getTime() - d * oneDay);
+
+                const dayData = STATE.history.filter(p => {
+                    const pt = new Date(p.time_tag);
+                    return pt >= dayStart && pt < dayEnd;
+                });
+
+                const layerY = cy + (d * 15); // Shift down
+                const layerScale = 1.0 - (d * 0.05); // Get smaller
+                const layerAlpha = 1.0 - (d * 0.12);
+
+                // Draw Ring
+                rdCtx.beginPath();
+                rdCtx.ellipse(cx, layerY, rx * layerScale, ry * layerScale, 0, 0, Math.PI * 2);
+                rdCtx.strokeStyle = (d === 0) ? 'rgba(255,150,0,0.3)' : 'rgba(255,255,255,0.05)';
+                rdCtx.lineWidth = 1;
                 rdCtx.stroke();
 
-                // Label
-                rdCtx.fillStyle = 'rgba(255,100,0,0.4)';
-                rdCtx.font = '8px Space Mono';
-                rdCtx.fillText(levels[i + 1], cx + 2, cy - r + 8);
-            });
+                // Label for Day
+                if (d > 0) {
+                    rdCtx.fillStyle = `rgba(150,150,150,${layerAlpha})`;
+                    rdCtx.font = '8px Space Mono';
+                    rdCtx.fillText(`-${d}d`, cx - rx * layerScale - 20, layerY);
+                } else {
+                    rdCtx.fillStyle = '#fa0';
+                    rdCtx.font = 'bold 9px Space Mono';
+                    rdCtx.fillText(`СЬОГОДНІ`, cx - rx * layerScale - 45, layerY);
+                }
+
+                // Draw Data for this day
+                if (dayData.length > 0) {
+                    drawRingData(dayData, cx, layerY, rx * layerScale, ry * layerScale, rotOffset, layerAlpha, d === 0);
+                }
+            }
+
+            // -- 2. Scanner & Alerts (Only on Top Layer d=0) --
+            // Time Labels (On Top Layer)
+            for (let i = 0; i < 24; i += 3) {
+                const ang = (i / 24) * Math.PI * 2 + rotOffset;
+                const cos = Math.cos(ang), sin = Math.sin(ang);
+                const rLabel = rx + 20;
+
+                // Draw Ticks on top ring
+                rdCtx.beginPath();
+                rdCtx.moveTo(cx + cos * rx, cy + sin * ry);
+                rdCtx.lineTo(cx + cos * (rx + 5), cy + sin * (ry + 5));
+                rdCtx.strokeStyle = 'rgba(255,100,0,0.5)';
+                rdCtx.stroke();
+
+                if (i % 6 === 0) { // 0, 6, 12, 18
+                    rdCtx.fillStyle = '#fff';
+                    rdCtx.font = 'bold 11px Space Mono';
+                    rdCtx.fillText(`${i.toString().padStart(2, '0')}:00`, cx + cos * rLabel - 15, cy + sin * (ry + 20) + 4);
+                }
+            }
+
+            // Current Time Marker
+            const sx = cx, sy = cy + (ry);
+            const totalH = (daysToShow - 1) * 15;
+
+            rdCtx.beginPath();
+            rdCtx.moveTo(cx, cy + ry); // Top front
+            rdCtx.lineTo(cx, cy + ry + totalH); // Bottom front
+            rdCtx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+            rdCtx.setLineDash([2, 2]);
+            rdCtx.stroke();
             rdCtx.setLineDash([]);
 
-            // Radial Lines (Hours)
-            for (let i = 0; i < 24; i += 2) {
-                const ang = (i / 24) * Math.PI * 2 - Math.PI / 2;
+            // Active Cursor (Top)
+            rdCtx.beginPath();
+            rdCtx.arc(cx, cy + ry, 3, 0, Math.PI * 2);
+            rdCtx.fillStyle = '#0ff';
+            rdCtx.fill();
+
+            // ALERT HUD
+            checkAlerts(STATE.currentFlux);
+        }
+
+        function drawRingData(data, cx, cy, rx, ry, rotOffset, alpha, isToday) {
+            rdCtx.lineCap = 'butt';
+
+            let maxFluxInDay = 0;
+
+            // Optimization: Don't draw every single point, stride?
+            const step = Math.max(1, Math.floor(data.length / 120));
+
+            for (let i = 0; i < data.length; i += step) {
+                const d = data[i];
+                if (d.flux > maxFluxInDay) maxFluxInDay = d.flux;
+
+                const time = new Date(d.time_tag);
+                const h = time.getUTCHours() + time.getUTCMinutes() / 60;
+                const ang = (h / 24) * Math.PI * 2 + rotOffset;
+
+                // Height
+                const val = getLogPos(d.flux);
+                if (val < 0.05) continue; // Noise floor
+
+                const height = val * (isToday ? 60 : 30); // Taller for today
+
+                const cos = Math.cos(ang);
+                const sin = Math.sin(ang);
+
+                // Position on Ring
+                const x = cx + cos * rx;
+                const y = cy + sin * ry;
+
+                // Color
+                let col = getClassColor(d.flux);
+
                 rdCtx.beginPath();
-                rdCtx.moveTo(cx + Math.cos(ang) * (radius * 0.1), cy + Math.sin(ang) * (radius * 0.1));
-                rdCtx.lineTo(cx + Math.cos(ang) * radius, cy + Math.sin(ang) * radius);
-                rdCtx.strokeStyle = 'rgba(255,100,0,0.08)';
+                rdCtx.moveTo(x, y);
+                rdCtx.lineTo(x, y - height);
+                rdCtx.strokeStyle = col;
+                rdCtx.globalAlpha = isToday ? alpha : alpha * 0.5;
+                rdCtx.lineWidth = isToday ? 2 : 1.5;
                 rdCtx.stroke();
+                rdCtx.globalAlpha = 1;
+            }
+        }
+
+        // Alert Logic
+        let alertState = false;
+        function checkAlerts(flux) {
+            // Thresholds
+            const isX = flux >= 1e-4;
+            const isM = flux >= 1e-5;
+
+            const alertBox = document.getElementById('alert-hub');
+            if (isX || isM) {
+                if (!alertState) {
+                    alertBox.innerHTML = `
+                        <div style="background:#f00; color:#000; padding:10px; border:2px solid #fff; font-weight:bold; box-shadow:0 0 20px #f00;">
+                            ⚠️ ВИЯВЛЕНО ВИСОКУ СОНЯЧНУ АКТИВНІСТЬ<br>
+                            КЛАС: ${STATE.currentClass}
+                        </div>
+                    `;
+                    alertState = true;
+                }
+            } else {
+                if (alertState) {
+                    alertBox.innerHTML = '';
+                    alertState = false;
+                }
             }
 
-            // -- 2. Data Ribbon (New Style: Filled Area) --
-            const last24h = STATE.history.filter(d => (now - new Date(d.time_tag)) < 24 * 60 * 60 * 1000);
-
-            if (last24h.length > 2) {
-                // Style: Gradient Fill based on Max class in range
-                rdCtx.beginPath();
-
-                // Start center
-                // Actually better to make a closed loop with center for fill?
-                // Polar chart fill usually goes back to center? No, let's close the shape naturally
-                // or ensure we start/end at min R.
-
-                last24h.forEach((d, i) => {
-                    const time = new Date(d.time_tag);
-                    const hrs = time.getUTCHours() + time.getUTCMinutes() / 60;
-                    const angle = (hrs / 24) * Math.PI * 2 - Math.PI / 2;
-                    const r = getLogPos(d.flux) * radius;
-                    const px = cx + Math.cos(angle) * r;
-                    const py = cy + Math.sin(angle) * r;
-
-                    if (i === 0) rdCtx.moveTo(px, py);
-                    else rdCtx.lineTo(px, py);
-                });
-
-                // Close shape roughly for fill? 
-                // Since it's 24h data, it might form a ring if full 24h, or a segment.
-                // Let's connect ends to center to enable fill.
-                // Find first and last points angle and drop to R=0
-                rdCtx.lineTo(cx, cy); // Drop to center
-                // Wait, need to move to first point's start?
-                // `closePath` connects last point to start point. 
-                // We want: Start Point -> ... -> End Point -> Center -> Start Point
-                // I did: Start -> ... -> End -> Center. Now closePath will do Center -> Start. Correct.
-                rdCtx.closePath();
-
-                rdCtx.save();
-                // Create gradient? Hard for arbitrary shape.
-                // Just solid low opacity fill.
-                // Color based on Max Flux in visual
-                const maxInView = last24h.reduce((a, b) => Math.max(a, b.flux), 0);
-                const baseCol = maxInView > 1e-4 ? '255, 0, 0' : (maxInView > 1e-5 ? '255, 100, 0' : '0, 200, 255');
-
-                rdCtx.fillStyle = `rgba(${baseCol}, 0.15)`;
-                rdCtx.fill();
-                rdCtx.restore();
-
-                // Stroke Line
-                rdCtx.beginPath();
-                last24h.forEach((d, i) => {
-                    const time = new Date(d.time_tag);
-                    const hrs = time.getUTCHours() + time.getUTCMinutes() / 60;
-                    const angle = (hrs / 24) * Math.PI * 2 - Math.PI / 2;
-                    const r = getLogPos(d.flux) * radius;
-                    const px = cx + Math.cos(angle) * r;
-                    const py = cy + Math.sin(angle) * r;
-                    if (i === 0) rdCtx.moveTo(px, py); else rdCtx.lineTo(px, py);
-                });
-                rdCtx.lineWidth = 1.5;
-                rdCtx.strokeStyle = `rgb(${baseCol})`;
-                rdCtx.stroke();
+            // Visual Blinker on Radar if High
+            if (isX) {
+                const t = performance.now();
+                if ((t % 500) < 250) {
+                    rdCtx.strokeStyle = 'rgba(255,0,0,0.5)';
+                    rdCtx.lineWidth = 10;
+                    rdCtx.strokeRect(0, 0, rdC.width, rdC.height);
+                }
             }
-
-            // -- 3. Scanner / Current Time -- 
-            // Rotating scanner line
-            const currHrs = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-            const currAng = (currHrs / 24) * Math.PI * 2 - Math.PI / 2;
-
-            // Scanner Fade Trail
-            const trailLen = 0.5; // radians
-            const grad = rdCtx.createLinearGradient(
-                cx + Math.cos(currAng) * radius, cy + Math.sin(currAng) * radius,
-                cx + Math.cos(currAng - 0.5) * radius, cy + Math.sin(currAng - 0.5) * radius
-            );
-            // hard to do angular gradient easily in standard canvas without tricks.
-            // Simplified scanner: just the line and glow.
-
-            rdCtx.beginPath();
-            rdCtx.moveTo(cx, cy);
-            rdCtx.lineTo(cx + Math.cos(currAng) * (radius + 10), cy + Math.sin(currAng) * (radius + 10));
-            rdCtx.strokeStyle = '#0ff';
-            rdCtx.lineWidth = 1.5;
-            rdCtx.stroke();
-
-            // Current Dot
-            const currR = getLogPos(STATE.currentFlux) * radius;
-            const mkX = cx + Math.cos(currAng) * currR;
-            const mkY = cy + Math.sin(currAng) * currR;
-
-            rdCtx.beginPath(); rdCtx.arc(mkX, mkY, 3, 0, Math.PI * 2);
-            rdCtx.fillStyle = '#fff'; rdCtx.fill();
-            // Pulse on current dot
-            rdCtx.beginPath(); rdCtx.arc(mkX, mkY, 6 + Math.sin(t * 10) * 3, 0, Math.PI * 2);
-            rdCtx.strokeStyle = 'rgba(255,255,255,0.4)'; rdCtx.stroke();
-
-            // -- 4. Decor -- 
-            // Outer Ring
-            rdCtx.beginPath(); rdCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-            rdCtx.strokeStyle = 'rgba(255,255,255,0.05)'; rdCtx.stroke();
-
-            // Crosshairs
-            rdCtx.beginPath();
-            rdCtx.moveTo(cx - 5, cy); rdCtx.lineTo(cx + 5, cy);
-            rdCtx.moveTo(cx, cy - 5); rdCtx.lineTo(cx, cy + 5);
-            rdCtx.strokeStyle = '#fa0'; rdCtx.stroke();
-
-            // Text: UTC
-            rdCtx.fillStyle = '#666';
-            rdCtx.font = '9px Space Mono'; rdCtx.textAlign = 'center';
-            rdCtx.fillText(`${now.getUTCHours().toString().padStart(2, '0')} UTC`, cx, cy - 10);
         }
 
         function drawBackground() {
             // Space Dust
             const t = performance.now() * 0.0002;
+            rdCtx.globalCompositeOperation = 'source-over';
             bgCtx.fillStyle = '#050505';
             bgCtx.fillRect(0, 0, bgC.width, bgC.height);
 
-            bgCtx.fillStyle = 'rgba(255, 120, 0, 0.3)'; // Warmer dust for Flare theme
+            bgCtx.fillStyle = 'rgba(255, 120, 0, 0.3)';
             for (let i = 0; i < 80; i++) {
                 const x = (Math.sin(i * 132 + t) * 0.5 + 0.5) * bgC.width;
                 const y = (Math.cos(i * 1.5 + t) * 0.5 + 0.5) * bgC.height;
