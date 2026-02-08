@@ -344,10 +344,9 @@
             font-family: 'Space Mono', monospace;
         }
 
-        /* RIGHT SIDE ENHANCEMENTS */
+        /* RIGHT SIDE */
         .right-hub {
             width: 500px;
-            /* Reduced Width */
             display: flex;
             flex-direction: column;
             gap: 15px;
@@ -389,7 +388,6 @@
         canvas#radar-canvas {
             width: 500px;
             height: 500px;
-            /* subtle glow behind canvas */
             filter: drop-shadow(0 0 30px rgba(255, 80, 0, 0.05));
         }
 
@@ -418,7 +416,6 @@
         .radar-legend-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            /* Horizontal layout */
             gap: 4px;
             margin-top: 5px;
         }
@@ -491,12 +488,11 @@
             bottom: 15px;
             right: 20px;
             font-size: 10px;
-            color: #fa0;
+            color: #f50;
             opacity: 0.6;
             text-align: right;
             pointer-events: none;
             font-weight: bold;
-            font-family: 'Space Mono', monospace;
         }
 
         /* RESPONSIVE */
@@ -522,14 +518,6 @@
                 width: 100%;
                 height: 100%;
             }
-
-            .radar-info-panel {
-                gap: 20px;
-            }
-
-            .brand-header {
-                font-size: 12px;
-            }
         }
     </style>
 </head>
@@ -548,7 +536,6 @@
                 <div id="cosmic-status-line">СКАНУВАННЯ X-RAY СПЕКТРУ...</div>
 
                 <div id="solar-hud">
-                    <!-- Dynamic Metrics -->
                     <div class="hud-item"><span class="hud-label">FLUX (LONG)</span> <span class="hud-val"
                             id="val-flux-l">---</span></div>
                     <div class="hud-item"><span class="hud-label">CLASS</span> <span class="hud-val"
@@ -587,7 +574,7 @@
                 <div class="sys-terminal" id="sys-out"></div>
             </div>
 
-            <!-- RIGHT COLUMN (UPDATED) -->
+            <!-- RIGHT COLUMN -->
             <div class="right-hub">
                 <div class="radar-header">
                     <span class="rh-title">RADAR: GOES-16 X-RAY FLUX (24H)</span>
@@ -599,42 +586,28 @@
                 </div>
 
                 <div class="radar-info-panel">
-                    <!-- Status Section -->
                     <div>
                         <div class="info-block-title">ОПЕРАТИВНИЙ СТАН</div>
-                        <div class="current-status-desc" id="status-desc-text">
-                            СИСТЕМА В РЕЖИМІ ОЧІКУВАННЯ. АКТИВНІСТЬ ВІДСУТНЯ.
-                        </div>
+                        <div class="current-status-desc" id="status-desc-text"> СИСТЕМА В РЕЖИМІ ОЧІКУВАННЯ... </div>
                         <ul class="impact-list" id="impact-list">
                             <li>Радіозв'язок: Норма</li>
                             <li>Навігація: Норма</li>
                         </ul>
                     </div>
 
-                    <!-- Legend (Horizontal) -->
                     <div>
                         <div class="info-block-title">ШКАЛА R РІВНІВ</div>
                         <div class="radar-legend-grid">
-                            <div class="leg-col">
-                                <span class="r-tag" style="background:#0f4">A/B</span>
-                                <span class="leg-lbl">BACK</span>
-                            </div>
-                            <div class="leg-col">
-                                <span class="r-tag" style="background:#ff0">C</span>
-                                <span class="leg-lbl">MINOR</span>
-                            </div>
-                            <div class="leg-col">
-                                <span class="r-tag" style="background:#fa0">M1</span>
-                                <span class="leg-lbl">MOD</span>
-                            </div>
-                            <div class="leg-col">
-                                <span class="r-tag" style="background:#f50">M5+</span>
-                                <span class="leg-lbl">STR</span>
-                            </div>
-                            <div class="leg-col">
-                                <span class="r-tag" style="background:#f00">X</span>
-                                <span class="leg-lbl">EXT</span>
-                            </div>
+                            <div class="leg-col"><span class="r-tag" style="background:#0f4">A/B</span><span
+                                    class="leg-lbl">BACK</span></div>
+                            <div class="leg-col"><span class="r-tag" style="background:#ff0">C</span><span
+                                    class="leg-lbl">MINOR</span></div>
+                            <div class="leg-col"><span class="r-tag" style="background:#fa0">M1</span><span
+                                    class="leg-lbl">MOD</span></div>
+                            <div class="leg-col"><span class="r-tag" style="background:#f50">M5+</span><span
+                                    class="leg-lbl">STR</span></div>
+                            <div class="leg-col"><span class="r-tag" style="background:#f00">X</span><span
+                                    class="leg-lbl">EXT</span></div>
                         </div>
                     </div>
                 </div>
@@ -646,12 +619,8 @@
     <div id="clock-overlay">INIT</div>
 
     <script>
-        const PROXY = 'https://corsproxy.io/?';
         const NOAA_XRAY_7D = 'https://services.swpc.noaa.gov/json/goes/primary/xrays-7-day.json';
 
-        // ------------------------------------
-        // STATE
-        // ------------------------------------
         const STATE = {
             currentFlux: 0,
             currentClass: 'A0.0',
@@ -665,29 +634,18 @@
         const LOG_MIN = -9.0;
         const LOG_MAX = -2.0;
 
-        // Canvas Setup
         const bgC = document.getElementById('bg-layer'); const bgCtx = bgC.getContext('2d');
         const rdC = document.getElementById('radar-canvas'); const rdCtx = rdC.getContext('2d');
 
         function resize() {
             const r = window.devicePixelRatio || 1;
             bgC.width = window.innerWidth * r; bgC.height = window.innerHeight * r;
-
-            // Layout Logic for Canvas Size
             const box = document.querySelector('.radar-box');
-            if (box) {
-                const bw = box.clientWidth;
-                const bh = box.clientHeight;
-                rdC.width = bw * r; rdC.height = bh * r;
-            }
+            if (box) { rdC.width = box.clientWidth * r; rdC.height = box.clientHeight * r; }
             bgCtx.scale(r, r); rdCtx.scale(r, r);
         }
         window.addEventListener('resize', resize);
-        // Initial resize will happen after content load or manually called later
 
-        // ------------------------------------
-        // UTILS
-        // ------------------------------------
         function log(msg) {
             const t = document.getElementById('sys-out');
             if (!t) return;
@@ -720,16 +678,10 @@
             return Math.max(0, Math.min(1, n));
         }
 
-        // ------------------------------------
-        // DATA
-        // ------------------------------------
         async function fetchData() {
             try {
-                // log('SYNC NOAA...');
                 const r = await fetch(NOAA_XRAY_7D);
-                if (!r.ok) throw new Error('API BAD RESP');
                 const data = await r.json();
-
                 const longChan = data.filter(d => d.energy === '0.1-0.8nm');
                 if (longChan.length === 0) return;
 
@@ -748,7 +700,6 @@
 
                 document.getElementById('val-flux-l').innerText = latest.flux.toExponential(2);
                 document.getElementById('val-flux-l').style.color = getClassColor(latest.flux);
-
                 document.getElementById('val-class').innerHTML = `<span class="status-dot" style="background:${getClassColor(latest.flux)}"></span>${STATE.currentClass}`;
                 document.getElementById('val-max24').innerText = fluxToClass(maxF);
                 document.getElementById('val-max24').style.color = getClassColor(maxF);
@@ -756,18 +707,14 @@
                 const shortChan = data.filter(d => d.energy === '0.05-0.4nm');
                 if (shortChan.length > 0) {
                     const ls = shortChan[shortChan.length - 1];
-                    const ratio = ls.flux / latest.flux;
-                    document.getElementById('val-ratio').innerText = ratio.toFixed(3);
+                    document.getElementById('val-ratio').innerText = (ls.flux / latest.flux).toFixed(3);
                 }
 
                 const rev = [...longChan].reverse();
                 const lastEvt = rev.find(d => d.flux >= 1e-6);
                 if (lastEvt) {
-                    const t = new Date(lastEvt.time_tag);
-                    const diffMins = Math.floor((now - t) / 60000);
+                    const diffMins = Math.floor((now - new Date(lastEvt.time_tag)) / 60000);
                     STATE.lastEventTime = diffMins < 60 ? `${diffMins}m ago` : `${(diffMins / 60).toFixed(1)}h ago`;
-                } else {
-                    STATE.lastEventTime = '>7d';
                 }
                 document.getElementById('val-last-evt').innerText = STATE.lastEventTime;
 
@@ -775,47 +722,29 @@
                 generateStats(longChan);
                 updateInfoPanel(STATE.currentFlux);
 
-            } catch (e) {
-                console.error(e);
-                log('NOAA SYNC FAIL');
-                // Mock if empty
-                if (STATE.history.length === 0) {
-                    STATE.currentFlux = 1.0e-7;
-                    STATE.currentClass = 'A1.0 (OFF)';
-                }
-            }
+            } catch (e) { console.error(e); }
         }
 
         function updateHeatmap(data) {
-            const h = document.getElementById('heatmap');
-            h.innerHTML = '';
+            const h = document.getElementById('heatmap'); h.innerHTML = '';
             const step = Math.max(1, Math.floor(data.length / 60));
             for (let i = 0; i < data.length; i += step) {
                 const p = data[i];
-                const d = document.createElement('div');
-                d.className = 'h-cell';
-                d.style.background = getClassColor(p.flux);
-                h.appendChild(d);
+                const d = document.createElement('div'); d.className = 'h-cell';
+                d.style.background = getClassColor(p.flux); h.appendChild(d);
             }
         }
 
         function generateStats(allData) {
-            const p = document.getElementById('stats-panel');
-            let html = '';
-            const days = {};
+            const p = document.getElementById('stats-panel'); let html = ''; const days = {};
             allData.forEach(d => {
                 const day = d.time_tag.split('T')[0];
                 if (!days[day] || d.flux > days[day]) days[day] = d.flux;
             });
-
             html += '<div class="cat-title"><span>DAILY MAX (7D)</span> <span>FLUX</span></div>';
             Object.keys(days).sort().reverse().slice(0, 7).forEach(date => {
                 const v = days[date];
-                const c = getClassColor(v);
-                html += `<div class="stat-row">
-                    <span class="stat-date">${date.slice(5)}</span>
-                    <span style="color:${c}; font-weight:bold">${fluxToClass(v)}</span>
-                </div>`;
+                html += `<div class="stat-row"><span class="stat-date">${date.slice(5)}</span><span style="color:${getClassColor(v)}; font-weight:bold">${fluxToClass(v)}</span></div>`;
             });
             p.innerHTML = html;
         }
@@ -823,285 +752,156 @@
         function updateInfoPanel(flux) {
             const desc = document.getElementById('status-desc-text');
             const list = document.getElementById('impact-list');
-
             let txt = '', impacts = [];
-
-            if (flux >= 1e-4) { // X
-                txt = "КРИТИЧНА ПОДІЯ (X-CLASS). СИЛЬНИЙ СПАЛАХ.";
-                impacts = [
-                    "Блокування HF радіо (R3+)",
-                    "Помилки GPS навігації",
-                    "Радіаційний шторм"
-                ];
+            if (flux >= 1e-4) {
+                txt = "КРИТИЧНА ПОДІЯ (X-CLASS)."; impacts = ["Блокування HF радіо (R3+)", "Помилки GPS", "Радіаційна небезпека"];
                 desc.style.color = '#f00';
-            } else if (flux >= 1e-5) { // M
-                txt = "СЕРЕДНЯ АКТИВНІСТЬ (M-CLASS).";
-                impacts = [
-                    "Можливі перебої радіо (R1-R2)",
-                    "Збурення іоносфери"
-                ];
+            } else if (flux >= 1e-5) {
+                txt = "СЕРЕДНЯ АКТИВНІСТЬ (M-CLASS)."; impacts = ["Перебої радіо (R1-R2)", "Збурення іоносфери"];
                 desc.style.color = '#fa0';
-            } else if (flux >= 1e-6) { // C
-                txt = "НИЗЬКА АКТИВНІСТЬ (C-CLASS).";
-                impacts = [
-                    "Нагрів корони",
-                    "Нормальна робота систем"
-                ];
-                desc.style.color = '#ff0';
             } else {
-                txt = "СПОКІЙНИЙ ФОНОВИЙ СТАН.";
-                impacts = ["Системи в нормі"];
+                txt = "СТАН СТАБІЛЬНИЙ (BACKGROUND)."; impacts = ["Системи в нормі"];
                 desc.style.color = '#0f4';
             }
-
             desc.innerText = txt;
             list.innerHTML = impacts.map(i => `<li>${i}</li>`).join('');
         }
 
-        // ------------------------------------
-        // VISUALIZATION - 7-DAY HELIX INTERCEPTOR
-        // ------------------------------------
         function drawRadar() {
             if (!STATE.history.length) return;
-
             const W = rdC.width / (window.devicePixelRatio || 1);
             const H = rdC.height / (window.devicePixelRatio || 1);
             rdCtx.clearRect(0, 0, W, H);
 
-            // 3D Setup
-            const cx = W / 2, cy = H / 2 - 40; // Shift up to fit stack
+            const cx = W / 2, cy = H / 2 - 30;
             const rx = Math.min(W, H) * 0.4;
             const ry = rx * 0.35;
-            const layerH = 35; // Vertical spacing between days
 
             const now = new Date();
-            const t = performance.now() * 0.001;
-
-            // Rotation based on time
             const currHrs = now.getUTCHours() + now.getUTCMinutes() / 60;
             const rotOffset = Math.PI / 2 - (currHrs / 24) * Math.PI * 2;
 
-            // -- 1. Draw 7 Days History (Helix Stack) --
-            // We draw from bottom (oldest) to top (newest) so they overlap correctly-ish.
-
-            const daysToShow = 7;
-            const oneDay = 24 * 60 * 60 * 1000;
-
-            // Iterate days: 6 days ago -> 0 days ago (Today)
-            for (let d = daysToShow - 1; d >= 0; d--) {
-                const dayStart = new Date(now.getTime() - (d + 1) * oneDay);
-                const dayEnd = new Date(now.getTime() - d * oneDay);
-
+            for (let d = 6; d >= 0; d--) {
+                const dayStart = new Date(now.getTime() - (d + 1) * 24 * 60 * 60 * 1000);
+                const dayEnd = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
                 const dayData = STATE.history.filter(p => {
                     const pt = new Date(p.time_tag);
                     return pt >= dayStart && pt < dayEnd;
                 });
 
-                const layerY = cy + (d * 15); // Shift down
-                const layerScale = 1.0 - (d * 0.05); // Get smaller
+                const layerY = cy + (d * 15);
+                const layerScale = 1.0 - (d * 0.05);
                 const layerAlpha = 1.0 - (d * 0.12);
 
-                // Draw Ring
                 rdCtx.beginPath();
                 rdCtx.ellipse(cx, layerY, rx * layerScale, ry * layerScale, 0, 0, Math.PI * 2);
                 rdCtx.strokeStyle = (d === 0) ? 'rgba(255,150,0,0.3)' : 'rgba(255,255,255,0.05)';
                 rdCtx.lineWidth = 1;
                 rdCtx.stroke();
 
-                // Label for Day
-                if (d > 0) {
-                    rdCtx.fillStyle = `rgba(150,150,150,${layerAlpha})`;
-                    rdCtx.font = '8px Space Mono';
-                    rdCtx.fillText(`-${d}d`, cx - rx * layerScale - 20, layerY);
-                } else {
-                    rdCtx.fillStyle = '#fa0';
-                    rdCtx.font = 'bold 9px Space Mono';
-                    rdCtx.fillText(`СЬОГОДНІ`, cx - rx * layerScale - 45, layerY);
+                if (d === 0) {
+                    rdCtx.font = 'bold 12px Space Mono';
+                    rdCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    rdCtx.textAlign = 'center';
+                    [0, 6, 12, 18].forEach(hr => {
+                        const ang = (hr / 24) * Math.PI * 2 + rotOffset;
+                        const tx = cx + Math.cos(ang) * (rx * 1.15);
+                        const ty = layerY + Math.sin(ang) * (ry * 1.15);
+                        rdCtx.fillText(hr.toString().padStart(2, '0') + ":00", tx, ty);
+                    });
+                    rdCtx.textAlign = 'start';
                 }
 
-                // Draw Data for this day
                 if (dayData.length > 0) {
-                    drawRingData(dayData, cx, layerY, rx * layerScale, ry * layerScale, rotOffset, layerAlpha, d === 0);
+                    const step = Math.max(1, Math.floor(dayData.length / 150));
+                    for (let i = 0; i < dayData.length; i += step) {
+                        const pt = dayData[i];
+                        const h = new Date(pt.time_tag).getUTCHours() + new Date(pt.time_tag).getUTCMinutes() / 60;
+                        const ang = (h / 24) * Math.PI * 2 + rotOffset;
+                        const val = getLogPos(pt.flux);
+                        if (val < 0.05) continue;
+                        const height = val * (d === 0 ? 60 : 30);
+                        const x = cx + Math.cos(ang) * rx * layerScale;
+                        const y = layerY + Math.sin(ang) * ry * layerScale;
+                        rdCtx.beginPath();
+                        rdCtx.moveTo(x, y);
+                        rdCtx.lineTo(x, y - height);
+                        rdCtx.strokeStyle = getClassColor(pt.flux);
+                        rdCtx.lineWidth = (d === 0 ? 2 : 1.5);
+                        rdCtx.globalAlpha = (d === 0 ? layerAlpha : layerAlpha * 0.5);
+                        rdCtx.stroke();
+                        rdCtx.globalAlpha = 1;
+                    }
                 }
             }
 
-            // -- 2. Scanner & Alerts (Only on Top Layer d=0) --
-            // Time Labels (On Top Layer)
-            for (let i = 0; i < 24; i += 3) {
-                const ang = (i / 24) * Math.PI * 2 + rotOffset;
-                const cos = Math.cos(ang), sin = Math.sin(ang);
-                const rLabel = rx + 20;
+            // NOW MARKER (REPOSITIONED TO BOTTOM - ЗАРАЗ В НИЗ)
+            const bx = cx, by = cy + ry;
+            const pulse = 1 + Math.sin(performance.now() * 0.01) * 0.2;
+            rdCtx.beginPath(); rdCtx.arc(bx, by, 7 * pulse, 0, Math.PI * 2);
+            rdCtx.strokeStyle = '#f50'; rdCtx.lineWidth = 2; rdCtx.stroke();
+            rdCtx.beginPath(); rdCtx.arc(bx, by, 2, 0, Math.PI * 2);
+            rdCtx.fillStyle = '#fff'; rdCtx.fill();
 
-                // Draw Ticks on top ring
-                rdCtx.beginPath();
-                rdCtx.moveTo(cx + cos * rx, cy + sin * ry);
-                rdCtx.lineTo(cx + cos * (rx + 5), cy + sin * (ry + 5));
-                rdCtx.strokeStyle = 'rgba(255,100,0,0.5)';
-                rdCtx.stroke();
+            // CONCISE REPORT NEAR MARKER
+            const flux = STATE.currentFlux;
+            let shortStatus = flux >= 1e-4 ? "X-КЛАС" : flux >= 1e-5 ? "M-КЛАС" : flux >= 1e-6 ? "C-КЛАС" : "СПОКІЙНО";
+            let shortCol = getClassColor(flux);
 
-                if (i % 6 === 0) { // 0, 6, 12, 18
-                    rdCtx.fillStyle = '#fff';
-                    rdCtx.font = 'bold 11px Space Mono';
-                    rdCtx.fillText(`${i.toString().padStart(2, '0')}:00`, cx + cos * rLabel - 15, cy + sin * (ry + 20) + 4);
-                }
-            }
+            rdCtx.fillStyle = shortCol; rdCtx.font = 'bold 10px Space Mono';
+            rdCtx.fillText("ЗАРАЗ", bx - 14, by + 18);
+            rdCtx.fillStyle = '#f80'; rdCtx.font = '9px Courier New';
+            rdCtx.fillText(shortStatus, bx - 18, by + 30);
+            rdCtx.fillStyle = '#fff';
+            rdCtx.fillText(STATE.currentClass, bx - 16, by + 42);
 
-            // Current Time Marker
-            const sx = cx, sy = cy + (ry);
-            const totalH = (daysToShow - 1) * 15;
-
-            rdCtx.beginPath();
-            rdCtx.moveTo(cx, cy + ry); // Top front
-            rdCtx.lineTo(cx, cy + ry + totalH); // Bottom front
-            rdCtx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-            rdCtx.setLineDash([2, 2]);
-            rdCtx.stroke();
-            rdCtx.setLineDash([]);
-
-            // Active Cursor (Top)
-            rdCtx.beginPath();
-            rdCtx.arc(cx, cy + ry, 3, 0, Math.PI * 2);
-            rdCtx.fillStyle = '#0ff';
-            rdCtx.fill();
-
-            // ALERT HUD
-            checkAlerts(STATE.currentFlux);
-        }
-
-        function drawRingData(data, cx, cy, rx, ry, rotOffset, alpha, isToday) {
-            rdCtx.lineCap = 'butt';
-
-            let maxFluxInDay = 0;
-
-            // Optimization: Don't draw every single point, stride?
-            const step = Math.max(1, Math.floor(data.length / 120));
-
-            for (let i = 0; i < data.length; i += step) {
-                const d = data[i];
-                if (d.flux > maxFluxInDay) maxFluxInDay = d.flux;
-
-                const time = new Date(d.time_tag);
-                const h = time.getUTCHours() + time.getUTCMinutes() / 60;
-                const ang = (h / 24) * Math.PI * 2 + rotOffset;
-
-                // Height
-                const val = getLogPos(d.flux);
-                if (val < 0.05) continue; // Noise floor
-
-                const height = val * (isToday ? 60 : 30); // Taller for today
-
-                const cos = Math.cos(ang);
-                const sin = Math.sin(ang);
-
-                // Position on Ring
-                const x = cx + cos * rx;
-                const y = cy + sin * ry;
-
-                // Color
-                let col = getClassColor(d.flux);
-
-                rdCtx.beginPath();
-                rdCtx.moveTo(x, y);
-                rdCtx.lineTo(x, y - height);
-                rdCtx.strokeStyle = col;
-                rdCtx.globalAlpha = isToday ? alpha : alpha * 0.5;
-                rdCtx.lineWidth = isToday ? 2 : 1.5;
-                rdCtx.stroke();
-                rdCtx.globalAlpha = 1;
-            }
-        }
-
-        // Alert Logic
-        let alertState = false;
-        function checkAlerts(flux) {
-            // Thresholds
-            const isX = flux >= 1e-4;
-            const isM = flux >= 1e-5;
-
-            const alertBox = document.getElementById('alert-hub');
-            if (isX || isM) {
-                if (!alertState) {
-                    alertBox.innerHTML = `
-                        <div style="background:#f00; color:#000; padding:10px; border:2px solid #fff; font-weight:bold; box-shadow:0 0 20px #f00;">
-                            ⚠️ ВИЯВЛЕНО ВИСОКУ СОНЯЧНУ АКТИВНІСТЬ<br>
-                            КЛАС: ${STATE.currentClass}
-                        </div>
-                    `;
-                    alertState = true;
-                }
-            } else {
-                if (alertState) {
-                    alertBox.innerHTML = '';
-                    alertState = false;
-                }
-            }
-
-            // Visual Blinker on Radar if High
-            if (isX) {
-                const t = performance.now();
-                if ((t % 500) < 250) {
-                    rdCtx.strokeStyle = 'rgba(255,0,0,0.5)';
-                    rdCtx.lineWidth = 10;
-                    rdCtx.strokeRect(0, 0, rdC.width, rdC.height);
-                }
-            }
+            // Scanner
+            rdCtx.beginPath(); rdCtx.setLineDash([2, 2]);
+            rdCtx.moveTo(cx, cy + ry); rdCtx.lineTo(cx, cy + ry + (6 * 15));
+            rdCtx.strokeStyle = 'rgba(0, 255, 255, 0.3)'; rdCtx.stroke(); rdCtx.setLineDash([]);
         }
 
         function drawBackground() {
-            // Space Dust
             const t = performance.now() * 0.0002;
-            rdCtx.globalCompositeOperation = 'source-over';
-            bgCtx.fillStyle = '#050505';
-            bgCtx.fillRect(0, 0, bgC.width, bgC.height);
-
-            bgCtx.fillStyle = 'rgba(255, 120, 0, 0.3)';
+            bgCtx.fillStyle = '#050505'; bgCtx.fillRect(0, 0, bgC.width, bgC.height);
             for (let i = 0; i < 80; i++) {
                 const x = (Math.sin(i * 132 + t) * 0.5 + 0.5) * bgC.width;
                 const y = (Math.cos(i * 1.5 + t) * 0.5 + 0.5) * bgC.height;
-                const s = Math.random() * 1.5;
-                bgCtx.fillRect(x, y, s, s);
+                bgCtx.fillStyle = 'rgba(255, 120, 0, 0.3)';
+                bgCtx.fillRect(x, y, 1.5, 1.5);
             }
         }
 
         function animLoop() {
             drawBackground();
             drawRadar();
-
             const n = new Date();
-            document.getElementById('clock-overlay').innerText = n.toISOString().split('.')[0] + " Z";
+            const utc = n.toISOString().split('.')[0].replace('T', ' ') + " UTC";
+            const loc = n.toLocaleTimeString('uk-UA');
+            document.getElementById('clock-overlay').innerHTML = `
+                <div style="font-size:8px; color:#f50; margin-bottom:2px;">SOLAR RADIATION HUD</div>
+                <div style="margin-bottom:2px;">${utc}</div>
+                <div style="color:#fff; font-size:11px;">${loc} (LOCAL)</div>
+            `;
             requestAnimationFrame(animLoop);
         }
 
-        // ------------------------------------
-        // CTRL
-        // ------------------------------------
         window.setChannel = (c, btn) => {
             STATE.channel = c;
             document.querySelectorAll('.btn-lite').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('sun-img').src = `https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_${c}.jpg?t=` + Date.now();
-            log(`CHAN: ${c}`);
         };
 
         window.zoomSun = (d) => {
             STATE.sunZoom = Math.max(1, Math.min(5, STATE.sunZoom + d));
             const img = document.getElementById('sun-img');
             if (STATE.sunZoom > 1.05) {
-                img.classList.add('zoomed');
-                img.style.setProperty('--sun-zoom', STATE.sunZoom);
-                log(`ZOOM: x${STATE.sunZoom.toFixed(1)}`);
-            } else {
-                img.classList.remove('zoomed');
-                log('ZOOM: RESET');
-            }
+                img.classList.add('zoomed'); img.style.setProperty('--sun-zoom', STATE.sunZoom);
+            } else { img.classList.remove('zoomed'); }
         };
 
-        // Init
-        fetchData();
-        resize(); // Force initial size calc
-        setInterval(fetchData, 60000);
-        animLoop();
-
+        fetchData(); resize(); setInterval(fetchData, 60000); animLoop();
     </script>
 </body>
 
