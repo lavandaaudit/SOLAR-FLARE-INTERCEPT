@@ -554,14 +554,14 @@
 
                 <div class="sun-box">
                     <img id="sun-img" class="sun-disk"
-                        src="https://services.swpc.noaa.gov/images/animations/suvi/primary/131/latest.png" alt="SDO 131">
+                        src="https://sdowww.lmsal.com/sdomedia/SunInTime/mostrecent/l0131.jpg" alt="SDO 131">
                 </div>
 
                 <div class="controls-row">
-                    <button class="btn-lite active" onclick="setChannel('131', this)">131Å (FLARE)</button>
-                    <button class="btn-lite" onclick="setChannel('094', this)">94Å (HOT)</button>
-                    <button class="btn-lite" onclick="setChannel('195', this)">193Å (COR)</button>
-                    <button class="btn-lite" onclick="setChannel('304', this)">304Å (CHR)</button>
+                    <button class="btn-lite active" onclick="setChannel('0131', this)">131Å (FLARE)</button>
+                    <button class="btn-lite" onclick="setChannel('0094', this)">94Å (HOT)</button>
+                    <button class="btn-lite" onclick="setChannel('0193', this)">193Å (COR)</button>
+                    <button class="btn-lite" onclick="setChannel('0304', this)">304Å (CHR)</button>
                     <span style="width:10px"></span>
                     <button class="btn-lite" onclick="zoomSun(0.2)">[+]</button>
                     <button class="btn-lite" onclick="zoomSun(-0.2)">[-]</button>
@@ -628,7 +628,7 @@
             history: [],
             lastEventTime: '---',
             sunZoom: 1.0,
-            channel: '131'
+            channel: '0131'
         };
 
         const LOG_MIN = -9.0;
@@ -890,7 +890,7 @@
             STATE.channel = c;
             document.querySelectorAll('.btn-lite').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById('sun-img').src = `https://services.swpc.noaa.gov/images/animations/suvi/primary/${c}/latest.png?t=` + Date.now();
+            document.getElementById('sun-img').src = `https://sdowww.lmsal.com/sdomedia/SunInTime/mostrecent/l${c}.jpg?t=` + Date.now();
         };
 
         window.zoomSun = (d) => {
@@ -906,4 +906,5 @@
 </body>
 
 </html>
+
 
